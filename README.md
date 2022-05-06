@@ -1,7 +1,9 @@
 # rtree.rs
 
-[![Docs](https://docs.rs/rtree_rs/badge.svg?)](https://docs.rs/rtree_rs/)
-[![Crates.io](https://img.shields.io/crates/v/rtree_rs.svg?)](https://crates.io/crates/rtree_rs)
+[![license](https://img.shields.io/crates/l/rtree_rs.svg)](LICENSE)
+[![crates.io](https://img.shields.io/crates/d/rtree_rs.svg)](https://crates.io/crates/rtree_rs)
+[![version](https://img.shields.io/crates/v/rtree_rs.svg)](https://crates.io/crates/rtree_rs/)
+[![documentation](https://docs.rs/rtree_rs/badge.svg)](https://docs.rs/rtree_rs/)
 
 A fast [R-tree](https://en.wikipedia.org/wiki/R-tree) for Rust. Ported from [an implementation](https://github.com/tidwall/rtree) that's designed for [Tile38](https://github.com/tidwall/tile38).
 
