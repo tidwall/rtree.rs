@@ -12,10 +12,14 @@ A fast [R-tree](https://en.wikipedia.org/wiki/R-tree) for Rust. Ported from [an 
 ## Features
 
 - [Optimized](#algorithms) for fast inserts and updates. Ideal for both static and moving data.
-- Supports the standard `insert`, `remove`, and `search` operations
+- Standard `insert`, `remove`, and `search` operations
 - Includes `nearby` function for performing nearest neighbors (kNN) iterations
+- Supports integers or floats for coordinates. `f32`, `f64`, `u64`, etc.
+- Allows for multiple dimensions using const generics.
 
-## Usage
+## Examples
+
+### Add points
 
 ```rust
 use rtree_rs::{RTree, Rect};
@@ -35,6 +39,21 @@ for item in tr.search(Rect::new([-112.1, 33.4], [-112.0, 33.5])) {
 // OUTPUT:
 // PHX
 ```
+
+### Add retangles
+
+```rust
+tr.insert(Rect::new([10, 10], [20, 20]), "R1");
+tr.insert(Rect::new([15, 12], [18, 24]), "R2");
+```
+
+### Multiple dimensions
+
+```rust
+tr.insert(Rect::new([10, 10, 10], [20, 20, 20]), "R1");
+tr.insert(Rect::new_point([15, 12, 24]), "P1");
+```
+
 
 ## Algorithms
 
