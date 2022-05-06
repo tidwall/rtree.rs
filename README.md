@@ -1,9 +1,9 @@
 # rtree.rs
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/tidwall/rtree.rs/Run%20tests)](#)
-[![Docs](https://docs.rs/rtree_rs/badge.svg)](https://docs.rs/rtree_rs/)
-[![Crates.io](https://img.shields.io/crates/v/rtree_rs.svg)](https://crates.io/crates/rtree_rs)
-[![MIT](https://img.shields.io/github/license/tidwall/rtree.rs.svg)](#license)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/tidwall/rtree.rs/Run%20tests?)](#)
+[![Docs](https://docs.rs/rtree_rs/badge.svg?)](https://docs.rs/rtree_rs/)
+[![Crates.io](https://img.shields.io/crates/v/rtree_rs.svg?)](https://crates.io/crates/rtree_rs)
+[![MIT](https://img.shields.io/github/license/tidwall/rtree.rs.svg?)](#license)
 
 A fast [R-tree](https://en.wikipedia.org/wiki/R-tree) for Rust. Ported from [an implementation](https://github.com/tidwall/rtree) that's designed for [Tile38](https://github.com/tidwall/tile38).
 
