@@ -15,7 +15,7 @@ A fast [R-tree](https://en.wikipedia.org/wiki/R-tree) for Rust. Ported from [an 
 - Standard `insert`, `remove`, and `search` operations
 - Includes `nearby` function for performing nearest neighbors (kNN) iterations
 - Supports integers or floats for coordinates. `f32`, `f64`, `u64`, etc.
-- Allows for multiple dimensions using const generics.
+- Allows for multiple dimensions using [const generics](https://blog.rust-lang.org/2021/02/26/const-generics-mvp-beta.html#what-are-const-generics).
 
 ## Examples
 
