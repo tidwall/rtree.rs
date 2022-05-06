@@ -89,3 +89,26 @@ A target rect is deleted directly. When the number of children in a rectangle fa
 ### Searching
 
 Same as the original algorithm.
+
+
+## Performance 
+
+On my 2021 Macbook M1 Max.
+
+```
+cd bench
+cargo run --release
+```
+
+```
+insert:        1,000,000 ops in 347ms, 2,880,185/sec, 347 ns/op
+search-item:   1,000,000 ops in 370ms, 2,700,423/sec, 370 ns/op
+search-1%:     10,000 ops in 31ms, 321,916/sec, 3106 ns/op
+search-5%:     10,000 ops in 233ms, 42,739/sec, 23397 ns/op
+search-10%:    10,000 ops in 704ms, 14,195/sec, 70442 ns/op
+remove-half:   500,000 ops in 170ms, 2,937,350/sec, 340 ns/op
+reinsert-half: 500,000 ops in 169ms, 2,945,730/sec, 339 ns/op
+search-item:   1,000,000 ops in 434ms, 2,304,059/sec, 434 ns/op
+search-1%:     10,000 ops in 34ms, 287,740/sec, 3475 ns/op
+remove-all:    1,000,000 ops in 363ms, 2,751,735/sec, 363 ns/op
+```
