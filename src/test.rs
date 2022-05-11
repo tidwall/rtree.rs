@@ -67,7 +67,6 @@ fn test_rtree(count: usize, points_only: bool) {
     }
     assert_eq!(count, pts.len());
 
-
     // remove each point
     for i in 0..pts.len() {
         let res = tr.remove(pts[i], &i).unwrap();
@@ -94,10 +93,9 @@ fn rects() {
     test_rtree(100_000, false);
 }
 
-
 impl<const D: usize, C, T: PartialEq> Node<D, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Display,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Display + Default,
 {
     fn svg(&self, depth: usize) -> String {
         let mut out = String::new();
@@ -128,7 +126,7 @@ where
 
 impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Display,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Display + Default,
 {
     pub fn svg(&self) -> String {
         let mut out = String::new();
@@ -145,6 +143,12 @@ where
         out += "</svg>\n";
         out
     }
+}
+
+#[test]
+fn default_rect() {
+    let mut tr: RTree<2, f64, usize> = RTree::new();
+    tr.insert(Rect::default(), 1);
 }
 
 #[test]
@@ -311,7 +315,7 @@ fn example() {
     // insert some points
     tr.insert(Rect::new_point([-112.0078, 33.4373]), "PHX");
     tr.insert(Rect::new_point([-118.4071, 33.9425]), "LAX");
-    tr.insert(Rect::new_point([-73.7822, 40.6441]),  "JFK");
+    tr.insert(Rect::new_point([-73.7822, 40.6441]), "JFK");
 
     // Search a rectangle
     for item in tr.search(Rect::new([-112.1, 33.4], [-112.0, 33.5])) {

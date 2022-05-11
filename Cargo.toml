@@ -1,6 +1,6 @@
 [package]
 name = "rtree_rs"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Josh Baker <joshbaker77@gmail.com>"]
 edition = "2021"
 license = "MIT"

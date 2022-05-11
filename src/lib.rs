@@ -14,7 +14,10 @@ const MAX_ITEMS: usize = 64;
 const MIN_ITEMS: usize = MAX_ITEMS * 10 / 100;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Rect<const D: usize, C> {
+pub struct Rect<const D: usize, C>
+where
+    C: Default,
+{
     pub min: [C; D],
     pub max: [C; D],
 }
@@ -146,20 +149,29 @@ where
     }
 }
 
+impl<const D: usize, C: Copy + Default> Default for Rect<D, C> {
+    fn default() -> Rect<D, C> {
+        Rect{
+            min: [Default::default(); D],
+            max: [Default::default(); D],
+        }
+    }
+}
+
 enum Data<const D: usize, C, T>
 where
-    C: PartialOrd + Copy,
+    C: PartialOrd + Copy + Default,
 {
     Item(T),
     Nodes(Box<Vec<Node<D, C, T>>>),
 }
 
-struct Node<const D: usize, N, T>
+struct Node<const D: usize, C, T>
 where
-    N: PartialOrd + Copy,
+    C: PartialOrd + Copy + Default,
 {
-    rect: Rect<D, N>,
-    data: Data<D, N, T>,
+    rect: Rect<D, C>,
+    data: Data<D, C, T>,
 }
 
 impl<const D: usize, C, T: PartialEq> Node<D, C, T>
@@ -399,7 +411,10 @@ where
     }
 }
 
-pub struct RTree<const D: usize, C: PartialOrd + Copy, T: PartialEq> {
+pub struct RTree<const D: usize, C, T: PartialEq>
+where
+    C: PartialOrd + Copy + Default,
+{
     root: Option<Node<D, C, T>>,
     length: usize,
     height: usize,
@@ -480,7 +495,7 @@ where
 
 // iterartors, ScanIterator, SearcIterator, NearbyIterator
 
-pub struct IterItem<'a, const D: usize, C, T> {
+pub struct IterItem<'a, const D: usize, C: Default, T> {
     pub rect: Rect<D, C>,
     pub data: &'a T,
     pub dist: C,
@@ -512,7 +527,7 @@ where
 
 struct StackNode<'a, const D: usize, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C>,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
     nodes: &'a [Node<D, C, T>],
     index: usize,
@@ -520,7 +535,7 @@ where
 
 impl<'a, const D: usize, C, T> StackNode<'a, D, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C>,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
     fn new_stack(root: &'a Option<Node<D, C, T>>, height: usize) -> Vec<StackNode<'a, D, C, T>> {
         let mut stack = Vec::with_capacity(height + 1);
@@ -541,14 +556,14 @@ where
 
 pub struct ScanIterator<'a, const D: usize, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C>,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
     stack: Vec<StackNode<'a, D, C, T>>,
 }
 
 impl<'a, const D: usize, C, T> ScanIterator<'a, D, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C>,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
     fn new(root: &'a Option<Node<D, C, T>>, height: usize) -> ScanIterator<'a, D, C, T> {
         ScanIterator {
@@ -593,7 +608,7 @@ where
 
 pub struct SearchIterator<'a, const D: usize, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C>,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
     stack: Vec<StackNode<'a, D, C, T>>,
     rect: Rect<D, C>,
@@ -601,7 +616,7 @@ where
 
 impl<'a, const D: usize, C, T> SearchIterator<'a, D, C, T>
 where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C>,
+    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
     fn new(
         root: &'a Option<Node<D, C, T>>,
