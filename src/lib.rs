@@ -10,8 +10,8 @@ use std::ops::Add;
 use std::ops::Mul;
 use std::ops::Sub;
 
-const MAX_ITEMS: usize = 64;
-const MIN_ITEMS: usize = MAX_ITEMS * 10 / 100;
+const MAX_ITEMS: usize = 32;
+const MIN_ITEMS: usize = MAX_ITEMS * 20 / 100;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Rect<const D: usize, C>
@@ -237,18 +237,18 @@ where
         let nodes = self.nodes();
         // choose subtree
         let mut found = false;
-        let mut narea = nodes[0].rect.min[0];
-        // first take a quick look for any nodes that contain the rect
-        for i in 0..nodes.len() {
-            if nodes[i].rect.contains(&rect) {
-                let area = nodes[i].rect.area();
-                if !found || area < narea {
-                    narea = area;
-                    index = i;
-                    found = true;
-                }
-            }
-        }
+        // let mut narea = nodes[0].rect.min[0];
+        // // first take a quick look for any nodes that contain the rect
+        // for i in 0..nodes.len() {
+        //     if nodes[i].rect.contains(&rect) {
+        //         let area = nodes[i].rect.area();
+        //         if !found || area < narea {
+        //             narea = area;
+        //             index = i;
+        //             found = true;
+        //         }
+        //     }
+        // }
         if !found {
             // found nothing, now go the slow path
             index = self.choose_least_enlargement(&rect);
