@@ -233,27 +233,7 @@ where
         if D == 0 {
             return 0;
         }
-        let mut index = 0;
-        let nodes = self.nodes();
-        // choose subtree
-        let mut found = false;
-        // let mut narea = nodes[0].rect.min[0];
-        // // first take a quick look for any nodes that contain the rect
-        // for i in 0..nodes.len() {
-        //     if nodes[i].rect.contains(&rect) {
-        //         let area = nodes[i].rect.area();
-        //         if !found || area < narea {
-        //             narea = area;
-        //             index = i;
-        //             found = true;
-        //         }
-        //     }
-        // }
-        if !found {
-            // found nothing, now go the slow path
-            index = self.choose_least_enlargement(&rect);
-        }
-        index
+        self.choose_least_enlargement(&rect)
     }
     fn insert(&mut self, rect: Rect<D, C>, data: T, height: usize) {
         if height == 0 {
