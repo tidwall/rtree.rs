@@ -3,12 +3,11 @@
 #![allow(unused_imports)]
 
 use super::*;
+use rand;
 
 fn point2(x: f64, y: f64) -> super::Rect<2, f64> {
     Rect::new_point([x, y])
 }
-
-extern crate rand;
 
 use std::fmt::Display;
 use std::fs::File;
