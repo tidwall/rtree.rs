@@ -38,6 +38,7 @@ fn test_rtree(count: usize, points_only: bool) {
         // search for this item
         assert_eq!(tr.search(pts[i]).filter(|x| x.data == &i).count(), 1);
     }
+
     // scan all rects and compare
     let mut all: Vec<IterItem<2, f64, usize>> = tr.scan().collect();
     all.sort_by(|a, b| a.data.cmp(b.data));
@@ -47,6 +48,26 @@ fn test_rtree(count: usize, points_only: bool) {
             panic!("not equal");
         }
     }
+
+
+    let mut tr2 = None;
+
+    lotsa::ops(1, 1, |_, _|{
+        tr2 = Some(tr.clone());
+    });
+    let tr2 = tr2.unwrap();
+
+
+
+    // // scan all rects and compare
+    // let mut all: Vec<IterItem<2, f64, usize>> = tr2.scan().collect();
+    // all.sort_by(|a, b| a.data.cmp(b.data));
+    // assert_eq!(all.len(), pts.len());
+    // for i in 0..pts.len() {
+    //     if pts[i] != all[i].rect {
+    //         panic!("not equal");
+    //     }
+    // }
 
     // search for each point again
     for i in 0..pts.len() {
@@ -123,9 +144,10 @@ where
     }
 }
 
-impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
+impl<const D: usize, C, T> RTree<D, C, T>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Display + Default,
+    T: PartialEq + Clone,
 {
     pub fn svg(&self) -> String {
         let mut out = String::new();

@@ -166,6 +166,20 @@ where
     Nodes(Box<Vec<Node<D, C, T>>>),
 }
 
+impl<const D: usize, C, T> Clone for Data<D, C, T>
+where
+    C: PartialOrd + Copy + Default,
+    T: PartialEq + Clone,
+{
+    fn clone(&self) -> Self {
+        match &self {
+            Data::Item(item) => Data::Item(item.clone()),
+            Data::Nodes(nodes) => Data::Nodes(nodes.clone()),
+        }
+    }
+}
+
+
 struct Node<const D: usize, C, T>
 where
     C: PartialOrd + Copy + Default,
@@ -173,6 +187,20 @@ where
     rect: Rect<D, C>,
     data: Data<D, C, T>,
 }
+
+impl<const D: usize, C, T> Clone for Node<D, C, T>
+where
+    C: PartialOrd + Copy + Default,
+    T: PartialEq + Clone,
+{
+    fn clone(&self) -> Self {
+        Node{
+            rect: self.rect.clone(),
+            data: self.data.clone(),
+        }
+    }
+}
+
 
 impl<const D: usize, C, T: PartialEq> Node<D, C, T>
 where
@@ -391,18 +419,34 @@ where
     }
 }
 
-pub struct RTree<const D: usize, C, T: PartialEq>
+pub struct RTree<const D: usize, C, T>
 where
     C: PartialOrd + Copy + Default,
+    T: PartialEq + Clone,
 {
     root: Option<Node<D, C, T>>,
     length: usize,
     height: usize,
 }
 
-impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
+impl<const D: usize, C, T> Clone for RTree<D, C, T>
+where
+    C: PartialOrd + Copy + Default,
+    T: PartialEq + Clone,
+{
+    fn clone(&self) -> Self {
+        RTree{
+            root: self.root.clone(),
+            length: self.length,
+            height: self.height,
+        }
+    }
+}
+
+impl<const D: usize, C, T> RTree<D, C, T>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Add<Output = C> + Mul<Output = C> + Default,
+    T: PartialEq + Clone,
 {
     pub fn new() -> RTree<D, C, T> {
         RTree {
@@ -481,9 +525,10 @@ pub struct IterItem<'a, const D: usize, C: Default, T> {
     pub dist: C,
 }
 
-impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
+impl<const D: usize, C, T> RTree<D, C, T>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
+    T: PartialEq + Clone,
 {
     pub fn iter(&self) -> ScanIterator<D, C, T> {
         self.scan()
