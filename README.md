@@ -40,7 +40,7 @@ for item in tr.search(Rect::new([-112.1, 33.4], [-112.0, 33.5])) {
 // PHX
 ```
 
-### Add retangles
+### Add rectangles
 
 ```rust
 tr.insert(Rect::new([10, 10], [20, 20]), "R1");
