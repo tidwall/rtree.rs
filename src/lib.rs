@@ -13,11 +13,8 @@ use std::ops::Sub;
 const MAX_ITEMS: usize = 32;
 const MIN_ITEMS: usize = MAX_ITEMS * 20 / 100;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Rect<const D: usize, C>
-where
-    C: Default,
-{
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rect<const D: usize, C> {
     pub min: [C; D],
     pub max: [C; D],
 }
@@ -107,10 +104,14 @@ where
     }
     fn on_edge(&self, rect: &Rect<D, C>) -> bool {
         for i in 0..D {
-            if !(rect.min[i] > self.min[i]) || !(rect.max[i] < self.max[i]) {
+            let higher = rect.min[i] > self.min[i];
+            let lower = rect.max[i] < self.max[i];
+
+            if !higher || !lower {
                 return true;
             }
         }
+
         false
     }
     fn area(&self) -> C {
@@ -151,25 +152,37 @@ where
 
 impl<const D: usize, C: Copy + Default> Default for Rect<D, C> {
     fn default() -> Rect<D, C> {
-        Rect{
+        Rect {
             min: [Default::default(); D],
             max: [Default::default(); D],
         }
     }
 }
 
-enum Data<const D: usize, C, T>
-where
-    C: PartialOrd + Copy + Default,
-{
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Data<const D: usize, C, T> {
     Item(T),
-    Nodes(Box<Vec<Node<D, C, T>>>),
+    Nodes(Vec<Node<D, C, T>>),
 }
 
-struct Node<const D: usize, C, T>
-where
-    C: PartialOrd + Copy + Default,
-{
+impl<const D: usize, C, T> Data<D, C, T> {
+    fn as_item(&self) -> Option<&T> {
+        match self {
+            Data::Item(item) => Some(item),
+            Data::Nodes(_) => None,
+        }
+    }
+
+    fn as_nodes(&self) -> Option<&Vec<Node<D, C, T>>> {
+        match self {
+            Data::Nodes(nodes) => Some(nodes),
+            Data::Item(_) => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Node<const D: usize, C, T> {
     rect: Rect<D, C>,
     data: Data<D, C, T>,
 }
@@ -180,8 +193,8 @@ where
 {
     fn new(rect: Rect<D, C>) -> Node<D, C, T> {
         Node {
-            rect: rect,
-            data: Data::Nodes(Box::new(Vec::with_capacity(MAX_ITEMS))),
+            rect,
+            data: Data::Nodes(Vec::with_capacity(MAX_ITEMS)),
         }
     }
     fn len(&self) -> usize {
@@ -216,9 +229,9 @@ where
         let mut jenlargement = rect.min[0];
         let mut jarea = rect.min[0];
         let nodes = self.nodes();
-        for i in 0..nodes.len() {
-            let uarea = nodes[i].rect.unioned_area(rect);
-            let area = nodes[i].rect.area();
+        for (i, node) in nodes.iter().enumerate() {
+            let uarea = node.rect.unioned_area(rect);
+            let area = node.rect.area();
             let enlargement = uarea - area;
             if i == 0 || enlargement < jenlargement || (enlargement == jenlargement && area < jarea)
             {
@@ -233,13 +246,13 @@ where
         if D == 0 {
             return 0;
         }
-        self.choose_least_enlargement(&rect)
+        self.choose_least_enlargement(rect)
     }
     fn insert(&mut self, rect: Rect<D, C>, data: T, height: usize) {
         if height == 0 {
             // leaf node
             self.nodes_mut().push(Node {
-                rect: rect,
+                rect,
                 data: Data::Item(data),
             });
         } else {
@@ -259,12 +272,12 @@ where
     }
     fn recalc(&mut self) {
         let nodes = self.nodes_mut();
-        if nodes.len() == 0 {
+        if nodes.is_empty() {
             return;
         }
         let mut rect = nodes[0].rect;
-        for i in 1..nodes.len() {
-            rect.expand(&nodes[i].rect);
+        for node in nodes.iter().skip(1) {
+            rect.expand(&node.rect);
         }
         self.rect = rect
     }
@@ -376,25 +389,24 @@ where
                 return (removed, recalced);
             }
         }
+
         (None, false)
     }
     pub fn search_flat<'a>(&'a self, rect: &Rect<D, C>, items: &mut Vec<(Rect<D, C>, &'a T)>) {
         let nodes = self.nodes();
-        for i in 0..nodes.len() {
-            if nodes[i].rect.intersects(&rect) {
-                match &nodes[i].data {
-                    Data::Item(data) => items.push((nodes[i].rect, data)),
-                    _ => nodes[i].search_flat(&rect, items),
+        for node in nodes.iter() {
+            if node.rect.intersects(rect) {
+                match &node.data {
+                    Data::Item(data) => items.push((node.rect, data)),
+                    _ => node.search_flat(rect, items),
                 }
             }
         }
     }
 }
 
-pub struct RTree<const D: usize, C, T: PartialEq>
-where
-    C: PartialOrd + Copy + Default,
-{
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct RTree<const D: usize, C, T> {
     root: Option<Node<D, C, T>>,
     length: usize,
     height: usize,
@@ -414,11 +426,11 @@ where
     pub fn len(&self) -> usize {
         self.length
     }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     pub fn rect(&self) -> Option<Rect<D, C>> {
-        match &self.root {
-            Some(root) => Some(root.rect),
-            None => None,
-        }
+        self.root.as_ref().map(|root| root.rect)
     }
     pub fn insert(&mut self, rect: Rect<D, C>, data: T) {
         if self.root.is_none() {
@@ -441,9 +453,8 @@ where
         if let Some(root) = &mut self.root {
             let mut reinsert = Vec::new();
             let (removed, recalced) = root.remove(&rect, data, &mut reinsert, self.height);
-            if removed.is_none() {
-                return None;
-            }
+            removed.as_ref()?;
+
             self.length -= reinsert.len() + 1;
             if self.length == 0 {
                 self.root = None;
@@ -475,10 +486,16 @@ where
 
 // iterartors, ScanIterator, SearcIterator, NearbyIterator
 
-pub struct IterItem<'a, const D: usize, C: Default, T> {
+pub struct IterItem<'a, const D: usize, C, T> {
     pub rect: Rect<D, C>,
     pub data: &'a T,
     pub dist: C,
+}
+
+impl<'a, const D: usize, C, T> IterItem<'a, D, C, T> {
+    fn new(rect: Rect<D, C>, data: &'a T, dist: C) -> Self {
+        Self { rect, data, dist }
+    }
 }
 
 impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
@@ -493,22 +510,19 @@ where
         ScanIterator::new(&self.root, self.height)
     }
 
-    pub fn search<'a>(&self, rect: Rect<D, C>) -> SearchIterator<D, C, T> {
+    pub fn search(&self, rect: Rect<D, C>) -> SearchIterator<D, C, T> {
         SearchIterator::new(&self.root, self.height, rect)
     }
 
-    pub fn nearby<'a, F>(&'a self, dist: F) -> NearbyIterator<D, C, T, F>
+    pub fn nearby<F>(&self, dist: F) -> NearbyIterator<D, C, T, F>
     where
-        F: FnMut(Rect<D, C>, Option<&'a T>) -> C,
+        F: FnMut(Rect<D, C>, Option<&'_ T>) -> C,
     {
         NearbyIterator::new(&self.root, dist)
     }
 }
 
-struct StackNode<'a, const D: usize, C, T>
-where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
-{
+struct StackNode<'a, const D: usize, C, T> {
     nodes: &'a [Node<D, C, T>],
     index: usize,
 }
@@ -517,27 +531,24 @@ impl<'a, const D: usize, C, T> StackNode<'a, D, C, T>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
+    fn new(nodes: &'a [Node<D, C, T>], index: usize) -> Self {
+        Self { nodes, index }
+    }
+
     fn new_stack(root: &'a Option<Node<D, C, T>>, height: usize) -> Vec<StackNode<'a, D, C, T>> {
         let mut stack = Vec::with_capacity(height + 1);
         if let Some(root) = &root {
-            stack.push(StackNode {
-                nodes: match &root.data {
-                    Data::Nodes(nodes) => nodes,
-                    _ => unreachable!(),
-                },
-                index: 0,
-            });
+            let nodes = root.data.as_nodes().expect("unreachable");
+            stack.push(StackNode::new(nodes, 0));
         }
+
         stack
     }
 }
 
 // scan iterator
 
-pub struct ScanIterator<'a, const D: usize, C, T>
-where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
-{
+pub struct ScanIterator<'a, const D: usize, C, T> {
     stack: Vec<StackNode<'a, D, C, T>>,
 }
 
@@ -558,27 +569,25 @@ where
 {
     type Item = IterItem<'a, D, C, T>;
     fn next(&mut self) -> Option<Self::Item> {
-        'outer: while let Some(stack) = &mut self.stack.last_mut() {
-            for i in stack.index..stack.nodes.len() {
-                stack.index = i + 1;
-                if let Data::Item(data) = &stack.nodes[i].data {
-                    return Some(IterItem {
-                        rect: stack.nodes[i].rect,
-                        data,
-                        dist: Default::default(),
-                    });
-                }
-                let snode = StackNode {
-                    nodes: match &stack.nodes[i].data {
-                        Data::Nodes(nodes) => nodes,
-                        _ => unreachable!(),
-                    },
-                    index: 0,
-                };
-                self.stack.push(snode);
-                continue 'outer;
+        while let Some(stack) = &mut self.stack.last_mut() {
+            if stack.index == stack.nodes.len() {
+                self.stack.pop();
+                continue;
             }
-            self.stack.pop();
+
+            let i = stack.index;
+            stack.index += 1;
+
+            match &stack.nodes[i].data {
+                Data::Nodes(nodes) => {
+                    let snode = StackNode::new(nodes, 0);
+                    self.stack.push(snode);
+                }
+                Data::Item(data) => {
+                    let item = IterItem::new(stack.nodes[i].rect, data, Default::default());
+                    return Some(item);
+                }
+            }
         }
         None
     }
@@ -586,10 +595,7 @@ where
 
 // search iterator -- much like the scan iterator but with a intersects guard.
 
-pub struct SearchIterator<'a, const D: usize, C, T>
-where
-    C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
-{
+pub struct SearchIterator<'a, const D: usize, C, T> {
     stack: Vec<StackNode<'a, D, C, T>>,
     rect: Rect<D, C>,
 }
@@ -621,21 +627,14 @@ where
                 if !stack.nodes[i].rect.intersects(&self.rect) {
                     continue;
                 }
+
                 stack.index = i + 1;
-                if let Data::Item(data) = &stack.nodes[i].data {
-                    return Some(IterItem {
-                        rect: stack.nodes[i].rect,
-                        data,
-                        dist: Default::default(),
-                    });
+
+                if let Some(data) = &stack.nodes[i].data.as_item() {
+                    return Some(IterItem::new(stack.nodes[i].rect, data, Default::default()));
                 }
-                let snode = StackNode {
-                    nodes: match &stack.nodes[i].data {
-                        Data::Nodes(nodes) => nodes,
-                        _ => unreachable!(),
-                    },
-                    index: 0,
-                };
+
+                let snode = StackNode::new(stack.nodes[i].data.as_nodes().expect("unreachable"), 0);
                 self.stack.push(snode);
                 continue 'outer;
             }
@@ -645,12 +644,15 @@ where
     }
 }
 
-struct NearbyItem<'a, const D: usize, C, T>
-where
-    C: PartialOrd + Copy + Default,
-{
+struct NearbyItem<'a, const D: usize, C, T> {
     dist: C,
     node: &'a Node<D, C, T>,
+}
+
+impl<'a, const D: usize, C, T> NearbyItem<'a, D, C, T> {
+    fn new(dist: C, node: &'a Node<D, C, T>) -> Self {
+        Self { dist, node }
+    }
 }
 
 impl<'a, const D: usize, C, T> PartialEq for NearbyItem<'a, D, C, T>
@@ -687,11 +689,10 @@ where
     fn new(root: &'a Option<Node<D, C, T>>, dist: F) -> NearbyIterator<'a, D, C, T, F> {
         let mut queue = Queue::new();
         if let Some(root) = root {
-            queue.push(NearbyItem {
-                dist: Default::default(),
-                node: root,
-            });
+            let item = NearbyItem::new(Default::default(), root);
+            queue.push(item);
         }
+
         NearbyIterator { queue, dist }
     }
 }
@@ -702,32 +703,23 @@ where
     F: FnMut(Rect<D, C>, Option<&'a T>) -> C,
 {
     type Item = IterItem<'a, D, C, T>;
+
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(item) = self.queue.pop() {
             match &item.node.data {
                 Data::Item(data) => {
-                    return Some(IterItem {
-                        rect: item.node.rect,
-                        data: data,
-                        dist: item.dist,
-                    });
+                    return Some(IterItem::new(item.node.rect, data, item.dist));
                 }
                 Data::Nodes(nodes) => {
-                    for i in 0..nodes.len() {
-                        self.queue.push(NearbyItem {
-                            dist: (self.dist)(
-                                nodes[i].rect,
-                                match &nodes[i].data {
-                                    Data::Item(data) => Some(data),
-                                    _ => None,
-                                },
-                            ),
-                            node: &nodes[i],
-                        });
+                    for node in nodes.iter() {
+                        let item =
+                            NearbyItem::new((self.dist)(node.rect, node.data.as_item()), node);
+                        self.queue.push(item);
                     }
                 }
             }
         }
+
         None
     }
 }

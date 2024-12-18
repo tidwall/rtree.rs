@@ -3,7 +3,6 @@
 #![allow(unused_imports)]
 
 use super::*;
-use rand;
 
 fn point2(x: f64, y: f64) -> super::Rect<2, f64> {
     Rect::new_point([x, y])
@@ -31,12 +30,12 @@ fn test_rtree(count: usize, points_only: bool) {
         }
     }
     // insert each point
-    for i in 0..pts.len() {
-        tr.insert(pts[i], i);
+    for (i, p) in pts.iter().enumerate() {
+        tr.insert(*p, i);
         // check the length
         assert_eq!(tr.len(), i + 1);
         // search for this item
-        assert_eq!(tr.search(pts[i]).filter(|x| x.data == &i).count(), 1);
+        assert_eq!(tr.search(*p).filter(|x| x.data == &i).count(), 1);
     }
     // scan all rects and compare
     let mut all: Vec<IterItem<2, f64, usize>> = tr.scan().collect();
@@ -49,8 +48,8 @@ fn test_rtree(count: usize, points_only: bool) {
     }
 
     // search for each point again
-    for i in 0..pts.len() {
-        assert_eq!(tr.search(pts[i]).filter(|x| x.data == &i).count(), 1);
+    for (i, p) in pts.iter().enumerate() {
+        assert_eq!(tr.search(*p).filter(|x| x.data == &i).count(), 1);
     }
 
     // scan kNN
@@ -109,8 +108,8 @@ where
                 self.rect.max[1] - self.rect.min[1],
                 ["red", "#009900", "#cccc00", "purple"][depth % 4]
             );
-            for i in 0..nodes.len() {
-                out += &nodes[i].svg(depth + 1);
+            for node in nodes.iter() {
+                out += &node.svg(depth + 1);
             }
         } else {
             out += &format!(
@@ -119,7 +118,8 @@ where
                 self.rect.min[0], self.rect.min[1], "black"
             );
         }
-        return out;
+
+        out
     }
 }
 
@@ -168,8 +168,8 @@ fn to_pts(pts: &str) -> Vec<[f64; 2]> {
 fn to_svg(pts: &str, path: &str) {
     let pts = to_pts(pts);
     let mut tr = RTree::new();
-    for i in 0..pts.len() {
-        tr.insert(point2(pts[i][0], pts[i][1]), i);
+    for (i, p) in pts.iter().enumerate() {
+        tr.insert(point2(p[0], p[1]), i);
     }
     let svg = tr.svg();
     let mut output = File::create(path).unwrap();
