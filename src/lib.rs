@@ -13,6 +13,21 @@ use std::ops::Sub;
 const MAX_ITEMS: usize = 32;
 const MIN_ITEMS: usize = MAX_ITEMS * 20 / 100;
 
+/// An axis-aligned rectangle in D dimensions.
+/// `min` and `max` specify the minimum and maximum coordinates along each axis.
+///
+/// # Type Parameters
+/// - `D`: Number of dimensions (const generic)
+/// - `C`: Coordinate numeric type (e.g., `f32`, `u64`)
+/// 
+/// # Example 
+/// ```
+/// use rtree_rs::Rect;
+/// 
+/// let rect: Rect<2, f32> = Rect::new([1.0, 1.0], [2.0, 2.0]);
+/// assert_eq!(rect.min, [1.0, 1.0]);
+/// assert_eq!(rect.max, [2.0, 2.0]);
+/// ```
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Rect<const D: usize, C>
 where
@@ -52,12 +67,38 @@ impl<const D: usize, C> Rect<D, C>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Add<Output = C> + Mul<Output = C> + Default,
 {
+    /// Create a new rectangle from min and max corners.
+    ///
+    /// # Arguments
+    /// * `min` - Lower corner
+    /// * `max` - Upper corner
+    ///
+    /// # Example 
+    /// ```
+    /// use rtree_rs::Rect;
+    /// 
+    /// let rect: Rect<2, i32> = Rect::new([1, 1], [2, 2]);
+    /// assert_eq!(rect.min, [1, 1]);
+    /// assert_eq!(rect.max, [2, 2]);
+    /// ```
     pub fn new(min: [C; D], max: [C; D]) -> Rect<D, C> {
         Rect { min, max }
     }
+
+    /// Create a zero-size rectangle at a given point.
+    /// 
+    /// # Example 
+    /// ```
+    /// use rtree_rs::Rect;
+    /// 
+    /// let rect: Rect<2, i32> = Rect::new_point([1, 1]);
+    /// assert_eq!(rect.min, [1, 1]);
+    /// assert_eq!(rect.max, [1, 1]);
+    /// ```
     pub fn new_point(point: [C; D]) -> Rect<D, C> {
         Rect::new(point, point)
     }
+
     fn expand(&mut self, rect: &Rect<D, C>) {
         for i in 0..D {
             if rect.min[i] < self.min[i] {
@@ -391,6 +432,12 @@ where
     }
 }
 
+/// An R-tree for fast spatial insert, remove, and query operations.
+/// 
+/// # Type Parameters
+/// - `D`: Number of dimensions (const generic)
+/// - `C`: Coordinate numeric type (e.g., `f32`, `u64`)
+/// - `T`: type of the item of the node
 pub struct RTree<const D: usize, C, T: PartialEq>
 where
     C: PartialOrd + Copy + Default,
@@ -404,6 +451,15 @@ impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Add<Output = C> + Mul<Output = C> + Default,
 {
+    /// Create an empty R-tree instance.
+    /// 
+    /// # Example
+    /// ```
+    /// use rtree_rs::RTree;
+    /// 
+    /// let rtree: RTree<2, f32, &'static str> = RTree::new();
+    /// assert_eq!(rtree.len(), 0);
+    /// ```
     pub fn new() -> RTree<D, C, T> {
         RTree {
             root: None,
@@ -411,15 +467,59 @@ where
             height: 0,
         }
     }
+
+    /// Number of items stored in the tree.
+    /// 
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    /// 
+    /// let mut rtree = RTree::new();
+    /// assert_eq!(rtree.len(), 0);
+    /// 
+    /// rtree.insert(Rect::new_point([52.0, 7.2]), "hello rustaceans!");
+    /// assert_eq!(rtree.len(), 1);
+    /// ```
     pub fn len(&self) -> usize {
         self.length
     }
+
+    /// Returns the bounding rectangle incasing all items, if any.
+    /// 
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    /// 
+    /// let mut rtree = RTree::new();
+    /// 
+    /// assert!(rtree.rect().is_none()); 
+    /// 
+    /// rtree.insert(Rect::new_point([52.0, 7.2]), "bob");
+    /// rtree.insert(Rect::new_point([56.0, 15.2]), "john");
+    /// rtree.insert(Rect::new_point([85.0, 52.0]), "piet");
+    /// 
+    /// let rect = rtree.rect()
+    ///     .expect("rect should be Some");
+    /// 
+    /// assert_eq!(rect.min, [52.0, 7.2]);
+    /// assert_eq!(rect.max, [85.0, 52.0]);
+    /// ```
     pub fn rect(&self) -> Option<Rect<D, C>> {
         match &self.root {
             Some(root) => Some(root.rect),
             None => None,
         }
     }
+
+    /// Insert a new item associated with a rectangle.
+    ///     
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    /// 
+    /// let mut rtree = RTree::new();
+    /// rtree.insert(Rect::new_point([52.0, 7.2]), "hello rustaceans!");
+    /// ```
     pub fn insert(&mut self, rect: Rect<D, C>, data: T) {
         if self.root.is_none() {
             self.root = Some(Node::new(rect));
@@ -437,6 +537,29 @@ where
         }
         self.length += 1;
     }
+
+    /// Remove an item matching a rectangle and payload value.
+    /// Returns the removed entry if found.
+    /// 
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    /// 
+    /// let mut rtree = RTree::new();
+    /// let empty_remove = rtree.remove(Rect::new_point([52.0, 7.2]), &"hello");
+    /// assert!(empty_remove.is_none());
+    /// 
+    /// rtree.insert(Rect::new_point([52.0, 7.2]), "hello");
+    /// assert_eq!(rtree.len(), 1);
+    /// 
+    /// let remove = rtree.remove(Rect::new_point([52.0, 7.2]), &"hello")
+    ///     .expect("should be Some");
+    /// 
+    /// assert_eq!(rtree.len(), 0);
+    /// 
+    /// assert!(remove.0 == Rect::new_point([52.0, 7.2]));
+    /// assert!(remove.1 == "hello");
+    /// ```
     pub fn remove(&mut self, rect: Rect<D, C>, data: &T) -> Option<(Rect<D, C>, T)> {
         if let Some(root) = &mut self.root {
             let mut reinsert = Vec::new();
@@ -466,6 +589,28 @@ where
             None
         }
     }
+
+    /// Query all items intersecting a given rectangle, appending results to `items`.
+    /// 
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    /// 
+    /// let mut rtree = RTree::new();
+    /// 
+    /// 
+    /// rtree.insert(Rect::new_point([1.0, 2.0]), "no intersect, x/y to small");
+    /// rtree.insert(Rect::new_point([11.0, 19.0]), "intersect");
+    /// rtree.insert(Rect::new_point([15.0, 21.0]), "no intersect, y to big");
+    /// rtree.insert(Rect::new_point([21.0, 21.0]), "no intersect, x/y to big");
+    /// 
+    /// let mut found_items = vec![];
+    /// rtree.search_flat(Rect::new([10.0, 10.0], [20.0, 20.0]), &mut found_items);
+    /// 
+    /// assert_eq!(found_items.len(), 1);
+    /// assert!(found_items[0] == (Rect::new_point([11.0, 19.0]), &"intersect"));
+    /// 
+    /// ```
     pub fn search_flat<'a>(&'a self, rect: Rect<D, C>, items: &mut Vec<(Rect<D, C>, &'a T)>) {
         if let Some(root) = &self.root {
             root.search_flat(&rect, items);
@@ -475,6 +620,8 @@ where
 
 // iterartors, ScanIterator, SearcIterator, NearbyIterator
 
+/// Item value yielded by R-tree iterators.
+/// Reports its bounding rectangle, payload, and distance (for kNN).
 pub struct IterItem<'a, const D: usize, C: Default, T> {
     pub rect: Rect<D, C>,
     pub data: &'a T,
@@ -485,18 +632,87 @@ impl<const D: usize, C, T: PartialEq> RTree<D, C, T>
 where
     C: PartialOrd + Copy + Sub<Output = C> + Mul<Output = C> + Default,
 {
+    /// Returns an iterator over all items in the R-tree.
+    ///
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    ///
+    /// let mut rtree = RTree::new();
+    /// rtree.insert(Rect::new_point([1.0, 2.0]), "A");
+    /// rtree.insert(Rect::new_point([3.0, 4.0]), "B");
+    ///
+    /// let items: Vec<_> = rtree.iter().map(|item| item.data).collect();
+    /// assert_eq!(items, vec![&"A", &"B"]);
+    /// ```
     pub fn iter(&self) -> ScanIterator<D, C, T> {
         self.scan()
     }
 
+    /// Returns an iterator that scans all items in the R-tree without filtering.
+    ///
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    ///
+    /// let mut rtree = RTree::new();
+    /// rtree.insert(Rect::new_point([1.0, 2.0]), "A");
+    /// rtree.insert(Rect::new_point([3.0, 4.0]), "B");
+    ///
+    /// let items: Vec<_> = rtree.scan().map(|item| item.data).collect();
+    /// assert_eq!(items, vec![&"A", &"B"]);
+    /// ```
     pub fn scan(&self) -> ScanIterator<D, C, T> {
         ScanIterator::new(&self.root, self.height)
     }
 
+    /// Returns an iterator over all items intersecting a given rectangle.
+    ///
+    /// # Arguments
+    /// * `rect` - The query rectangle to intersect with stored item rectangles.
+    ///
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    ///
+    /// let mut rtree = RTree::new();
+    /// rtree.insert(Rect::new_point([1.0, 2.0]), "inside");
+    /// rtree.insert(Rect::new_point([5.0, 6.0]), "outside");
+    ///
+    /// let query = Rect::new([0.0, 0.0], [3.0, 4.0]);
+    /// let mut results = rtree.search(query);
+    ///
+    /// let found: Vec<_> = results.map(|item| item.data).collect();
+    /// assert_eq!(found, vec![&"inside"]);
+    /// ```
     pub fn search<'a>(&self, rect: Rect<D, C>) -> SearchIterator<D, C, T> {
         SearchIterator::new(&self.root, self.height, rect)
     }
 
+    /// Returns an iterator for performing nearest-neighbor (kNN) style queries,
+    /// using a custom user-provided distance function.
+    ///
+    /// # Arguments
+    /// * `dist` - A function that computes distance from an item rectangle and optional data reference.
+    ///
+    /// # Example
+    /// ```
+    /// use rtree_rs::{RTree, Rect};
+    ///
+    /// let mut rtree: RTree<2, f32, &'static str> = RTree::new();
+    /// rtree.insert(Rect::new_point([0.0, 0.0]), "origin");
+    /// rtree.insert(Rect::new_point([5.0, 5.0]), "far");
+    ///
+    /// // Distance function measuring squared distance to point (1,1)
+    /// let nearest = rtree.nearby(|rect, _| {
+    ///     let dx = if rect.min[0] > 1.0 { rect.min[0] - 1.0 } else { 1.0 - rect.max[0] };
+    ///     let dy = if rect.min[1] > 1.0 { rect.min[1] - 1.0 } else { 1.0 - rect.max[1] };
+    ///     dx * dx + dy * dy
+    /// });
+    ///
+    /// let closest = nearest.map(|item| item.data).next();
+    /// assert_eq!(closest, Some(&"origin"));
+    /// ```
     pub fn nearby<'a, F>(&'a self, dist: F) -> NearbyIterator<D, C, T, F>
     where
         F: FnMut(Rect<D, C>, Option<&'a T>) -> C,
